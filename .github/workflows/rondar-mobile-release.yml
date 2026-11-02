@@ -1,0 +1,59 @@
+# Added by Rondar for the video studio. It mimics a store upload: it builds nothing,
+# reads no store key and sends nothing to a store.
+# rondar-release-contract: 3
+# rondar-mobile-platform: android
+# rondar-mobile-workflow: release
+name: Rondar mobile release
+run-name: Rondar release ${{ inputs.release_id }} build ${{ inputs.build_number }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        required: true
+        type: string
+      build_number:
+        required: true
+        type: string
+      channel:
+        required: true
+        type: string
+      sha:
+        required: true
+        type: string
+      release_notes:
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      BUILD_NUMBER: ${{ inputs.build_number }}
+      CHANNEL: ${{ inputs.channel }}
+      RELEASE_SHA: ${{ inputs.sha }}
+    steps:
+      - name: Mimic the upload to the test channel
+        run: echo "Demo only. Nothing goes to a store."
+
+      - name: Record the result for Rondar
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          digest="sha256:$(printf '%s' "$RELEASE_SHA-$BUILD_NUMBER" | sha256sum | awk '{print $1}')"
+          jq -n --arg sha "$RELEASE_SHA" --arg build "$BUILD_NUMBER" --arg channel "$CHANNEL" \
+            --arg digest "$digest" --arg outcome "${{ job.status }}" \
+            '{version: 3, platform: "android", sha: $sha, build_number: $build, channel: $channel, binary_sha256: $digest, outcome: $outcome}' \
+            > "$RUNNER_TEMP/rondar-mobile-release.json"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rondar-mobile-release
+          path: ${{ runner.temp }}/rondar-mobile-release.json
+          retention-days: 7
