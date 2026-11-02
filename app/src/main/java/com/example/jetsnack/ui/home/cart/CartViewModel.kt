@@ -22,19 +22,14 @@ import com.example.jetsnack.R
 import com.example.jetsnack.model.OrderLine
 import com.example.jetsnack.model.SnackRepo
 import com.example.jetsnack.model.SnackbarManager
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Holds the contents of the cart and allows changes to it.
- *
- * TODO: Move data to Repository so it can be displayed and changed consistently throughout the app.
+ * Exposes the contents of the cart, held by [SnackRepo], and allows changes to it.
  */
-class CartViewModel(private val snackbarManager: SnackbarManager, snackRepository: SnackRepo) : ViewModel() {
+class CartViewModel(private val snackbarManager: SnackbarManager, private val snackRepository: SnackRepo) : ViewModel() {
 
-    private val _orderLines: MutableStateFlow<List<OrderLine>> =
-        MutableStateFlow(snackRepository.getCart())
-    val orderLines: StateFlow<List<OrderLine>> get() = _orderLines
+    val orderLines: StateFlow<List<OrderLine>> = snackRepository.getCart()
 
     // Logic to show errors every few requests
     private var requestCount = 0
@@ -42,8 +37,8 @@ class CartViewModel(private val snackbarManager: SnackbarManager, snackRepositor
 
     fun increaseSnackCount(snackId: Long) {
         if (!shouldRandomlyFail()) {
-            val currentCount = _orderLines.value.first { it.snack.id == snackId }.count
-            updateSnackCount(snackId, currentCount + 1)
+            val currentCount = orderLines.value.first { it.snack.id == snackId }.count
+            snackRepository.updateCartCount(snackId, currentCount + 1)
         } else {
             snackbarManager.showMessage(R.string.cart_increase_error)
         }
@@ -51,13 +46,13 @@ class CartViewModel(private val snackbarManager: SnackbarManager, snackRepositor
 
     fun decreaseSnackCount(snackId: Long) {
         if (!shouldRandomlyFail()) {
-            val currentCount = _orderLines.value.first { it.snack.id == snackId }.count
+            val currentCount = orderLines.value.first { it.snack.id == snackId }.count
             if (currentCount == 1) {
                 // remove snack from cart
                 removeSnack(snackId)
             } else {
                 // update quantity in cart
-                updateSnackCount(snackId, currentCount - 1)
+                snackRepository.updateCartCount(snackId, currentCount - 1)
             }
         } else {
             snackbarManager.showMessage(R.string.cart_decrease_error)
@@ -65,17 +60,7 @@ class CartViewModel(private val snackbarManager: SnackbarManager, snackRepositor
     }
 
     fun removeSnack(snackId: Long) {
-        _orderLines.value = _orderLines.value.filter { it.snack.id != snackId }
-    }
-
-    private fun updateSnackCount(snackId: Long, count: Int) {
-        _orderLines.value = _orderLines.value.map {
-            if (it.snack.id == snackId) {
-                it.copy(count = count)
-            } else {
-                it
-            }
-        }
+        snackRepository.removeFromCart(snackId)
     }
 
     /**

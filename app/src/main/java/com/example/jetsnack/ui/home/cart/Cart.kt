@@ -471,7 +471,7 @@ private fun CheckoutBar(modifier: Modifier = Modifier) {
 private fun CartPreview() {
     JetsnackTheme {
         Cart(
-            orderLines = SnackRepo.getCart(),
+            orderLines = SnackRepo.getCart().value,
             removeSnack = {},
             increaseItemCount = {},
             decreaseItemCount = {},

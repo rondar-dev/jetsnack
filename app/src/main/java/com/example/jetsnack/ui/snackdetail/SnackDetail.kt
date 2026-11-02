@@ -185,7 +185,10 @@ fun SnackDetail(snackId: Long, origin: String, upPress: () -> Unit) {
             Title(snack, origin) { scroll.value }
             Image(snackId, origin, snack.imageRes) { scroll.value }
             Up(upPress)
-            CartBottomBar(modifier = Modifier.align(Alignment.BottomCenter))
+            CartBottomBar(
+                onAddToCart = { count -> SnackRepo.addToCart(snack.id, count) },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
 }
@@ -545,7 +548,7 @@ private fun CollapsingImageLayout(collapseFractionProvider: () -> Float, modifie
 }
 
 @Composable
-private fun CartBottomBar(modifier: Modifier = Modifier) {
+private fun CartBottomBar(onAddToCart: (count: Int) -> Unit, modifier: Modifier = Modifier) {
     val (count, updateCount) = remember { mutableIntStateOf(1) }
     val sharedTransitionScope =
         LocalSharedTransitionScope.current ?: throw IllegalStateException("No Shared scope")
@@ -583,8 +586,9 @@ private fun CartBottomBar(modifier: Modifier = Modifier) {
                         )
                         Spacer(Modifier.width(16.dp))
                         JetsnackButton(
-                            onClick = { /* todo */ },
+                            onClick = { onAddToCart(count) },
                             modifier = Modifier.weight(1f),
+                            enabled = count > 0,
                         ) {
                             Text(
                                 text = stringResource(R.string.add_to_cart),

@@ -18,6 +18,10 @@ package com.example.jetsnack.model
 
 import androidx.compose.runtime.Immutable
 import kotlin.random.Random
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 @Immutable
 data class SnackCollection(val id: Long, val name: String, val snacks: List<Snack>, val type: CollectionType = CollectionType.Normal)
@@ -34,7 +38,33 @@ object SnackRepo {
     fun getInspiredByCart() = inspiredByCart
     fun getFilters() = filters
     fun getPriceFilters() = priceFilters
-    fun getCart() = cart
+    fun getCart(): StateFlow<List<OrderLine>> = cart.asStateFlow()
+
+    /**
+     * Adds [count] of the snack to the cart, on top of any already there.
+     */
+    fun addToCart(snackId: Long, count: Int) {
+        cart.update { orderLines ->
+            if (orderLines.any { it.snack.id == snackId }) {
+                orderLines.map {
+                    if (it.snack.id == snackId) it.copy(count = it.count + count) else it
+                }
+            } else {
+                orderLines + OrderLine(getSnack(snackId), count)
+            }
+        }
+    }
+
+    fun updateCartCount(snackId: Long, count: Int) {
+        cart.update { orderLines ->
+            orderLines.map { if (it.snack.id == snackId) it.copy(count = count) else it }
+        }
+    }
+
+    fun removeFromCart(snackId: Long) {
+        cart.update { orderLines -> orderLines.filter { it.snack.id != snackId } }
+    }
+
     fun getSortFilters() = sortFilters
     fun getCategoryFilters() = categoryFilters
     fun getSortDefault() = sortDefault
@@ -96,10 +126,12 @@ private val related = listOf(
     popular.copy(id = Random.nextLong()),
 )
 
-private val cart = listOf(
-    OrderLine(snacks[4], 2),
-    OrderLine(snacks[6], 3),
-    OrderLine(snacks[8], 1),
+private val cart = MutableStateFlow(
+    listOf(
+        OrderLine(snacks[4], 2),
+        OrderLine(snacks[6], 3),
+        OrderLine(snacks[8], 1),
+    ),
 )
 
 @Immutable
