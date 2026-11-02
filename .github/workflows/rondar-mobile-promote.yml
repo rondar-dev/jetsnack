@@ -1,0 +1,41 @@
+# Added by Rondar for the video studio. It mimics a store promotion: it sends nothing to
+# a store.
+# rondar-release-contract: 3
+# rondar-mobile-platform: android
+# rondar-mobile-workflow: promote
+name: Rondar mobile promote
+run-name: Rondar promote ${{ inputs.release_id }} build ${{ inputs.build_number }} to ${{ inputs.channel }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        required: true
+        type: string
+      build_number:
+        required: true
+        type: string
+      channel:
+        required: true
+        type: string
+      sha:
+        required: true
+        type: string
+      rollout:
+        required: false
+        type: string
+        default: ""
+      release_notes:
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mimic the promotion
+        run: echo "Demo only. Nothing goes to a store."
