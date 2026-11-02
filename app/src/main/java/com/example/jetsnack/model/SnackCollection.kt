@@ -18,6 +18,10 @@ package com.example.jetsnack.model
 
 import androidx.compose.runtime.Immutable
 import kotlin.random.Random
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 @Immutable
 data class SnackCollection(val id: Long, val name: String, val snacks: List<Snack>, val type: CollectionType = CollectionType.Normal)
@@ -28,17 +32,46 @@ enum class CollectionType { Normal, Highlight }
  * A fake repo
  */
 object SnackRepo {
+    private val _orderLines = MutableStateFlow(cart)
+
+    /** The contents of the cart, shared by every screen that shows or changes it. */
+    val orderLines: StateFlow<List<OrderLine>> = _orderLines.asStateFlow()
+
     fun getSnacks(): List<SnackCollection> = snackCollections
     fun getSnack(snackId: Long) = snacks.find { it.id == snackId }!!
     fun getRelated(@Suppress("UNUSED_PARAMETER") snackId: Long) = related
     fun getInspiredByCart() = inspiredByCart
     fun getFilters() = filters
     fun getPriceFilters() = priceFilters
-    fun getCart() = cart
+    fun getCart(): List<OrderLine> = orderLines.value
     fun getSortFilters() = sortFilters
     fun getCategoryFilters() = categoryFilters
     fun getSortDefault() = sortDefault
     fun getLifeStyleFilters() = lifeStyleFilters
+
+    /** Adds [count] of the snack to the cart, on top of any already in it. */
+    fun addToCart(snackId: Long, count: Int) {
+        if (count <= 0) return
+        _orderLines.update { lines ->
+            if (lines.any { it.snack.id == snackId }) {
+                lines.map {
+                    if (it.snack.id == snackId) it.copy(count = it.count + count) else it
+                }
+            } else {
+                lines + OrderLine(getSnack(snackId), count)
+            }
+        }
+    }
+
+    fun removeFromCart(snackId: Long) {
+        _orderLines.update { lines -> lines.filter { it.snack.id != snackId } }
+    }
+
+    fun updateCartCount(snackId: Long, count: Int) {
+        _orderLines.update { lines ->
+            lines.map { if (it.snack.id == snackId) it.copy(count = count) else it }
+        }
+    }
 }
 
 /**

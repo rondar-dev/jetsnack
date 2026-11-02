@@ -20,7 +20,10 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.espresso.Espresso
+import com.example.jetsnack.model.SnackRepo
 import com.example.jetsnack.ui.MainActivity
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -59,5 +62,22 @@ class AppTest {
     fun app_canNavigateToDetailPage() {
         composeTestRule.onNodeWithText("Chips").performClick()
         composeTestRule.onNodeWithText("Lorem ipsum", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun app_canAddSnackToCartFromDetailPage() {
+        val chips = SnackRepo.getSnacks().flatMap { it.snacks }.first { it.name == "Chips" }
+        try {
+            composeTestRule.onNodeWithText("Chips").performClick()
+            composeTestRule.onNodeWithText("ADD TO CART").performClick()
+            Espresso.pressBack()
+
+            composeTestRule.onNodeWithText("MY CART").performClick()
+            composeTestRule.onNodeWithText("Order (4 items)").assertIsDisplayed()
+            assertEquals(1, SnackRepo.getCart().first { it.snack.id == chips.id }.count)
+        } finally {
+            // The cart outlives the activity, so leave it as the other tests expect it
+            SnackRepo.removeFromCart(chips.id)
+        }
     }
 }
