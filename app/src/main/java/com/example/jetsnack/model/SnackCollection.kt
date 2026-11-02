@@ -18,6 +18,10 @@ package com.example.jetsnack.model
 
 import androidx.compose.runtime.Immutable
 import kotlin.random.Random
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 @Immutable
 data class SnackCollection(val id: Long, val name: String, val snacks: List<Snack>, val type: CollectionType = CollectionType.Normal)
@@ -28,17 +32,48 @@ enum class CollectionType { Normal, Highlight }
  * A fake repo
  */
 object SnackRepo {
+    private val _cart = MutableStateFlow(initialCart)
+
+    /** The cart shared by every screen of the app. */
+    val cart: StateFlow<List<OrderLine>> = _cart.asStateFlow()
+
     fun getSnacks(): List<SnackCollection> = snackCollections
     fun getSnack(snackId: Long) = snacks.find { it.id == snackId }!!
     fun getRelated(@Suppress("UNUSED_PARAMETER") snackId: Long) = related
     fun getInspiredByCart() = inspiredByCart
     fun getFilters() = filters
     fun getPriceFilters() = priceFilters
-    fun getCart() = cart
+    fun getCart() = cart.value
     fun getSortFilters() = sortFilters
     fun getCategoryFilters() = categoryFilters
     fun getSortDefault() = sortDefault
     fun getLifeStyleFilters() = lifeStyleFilters
+
+    /**
+     * Adds [count] of the snack to the cart: to its existing order line, or to a new one at the end.
+     */
+    fun addToCart(snackId: Long, count: Int = 1) {
+        if (count <= 0) return
+        _cart.update { orderLines ->
+            if (orderLines.any { it.snack.id == snackId }) {
+                orderLines.map {
+                    if (it.snack.id == snackId) it.copy(count = it.count + count) else it
+                }
+            } else {
+                orderLines + OrderLine(getSnack(snackId), count)
+            }
+        }
+    }
+
+    fun updateCartCount(snackId: Long, count: Int) {
+        _cart.update { orderLines ->
+            orderLines.map { if (it.snack.id == snackId) it.copy(count = count) else it }
+        }
+    }
+
+    fun removeFromCart(snackId: Long) {
+        _cart.update { orderLines -> orderLines.filter { it.snack.id != snackId } }
+    }
 }
 
 /**
@@ -96,7 +131,7 @@ private val related = listOf(
     popular.copy(id = Random.nextLong()),
 )
 
-private val cart = listOf(
+private val initialCart = listOf(
     OrderLine(snacks[4], 2),
     OrderLine(snacks[6], 3),
     OrderLine(snacks[8], 1),
